@@ -1,0 +1,131 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  userId                      String                 @unique @default(uuid())
+  firstName                   String?
+  lastName                    String?
+  username                    String
+  email                       String                 @unique
+  password                    String
+  dateOfBirth                 DateTime?
+  createdAt                   DateTime               @default(now())
+  isVerified                  Boolean                @default(false)
+  isDeleted                   Boolean                @default(false)
+  accountType                 String
+  balance                     Decimal                @default(0)
+  status                      Status                 @default(UNVERIFIED)
+  transactionPin              Int?
+  dailyTransaction            Decimal                @default(0)
+  monthlyTransaction          Decimal                @default(0)
+  Notification                Notification[]         @relation("notification")
+  Otp                         Otp?                   @relation("otp")
+  ScheduleReceivedTransaction ScheduledTransaction[] @relation("receivedSchedule")
+  ScheduleSentTransaction     ScheduledTransaction[] @relation("sentSchedule")
+  ReceivedTransaction         Transaction[]          @relation("received")
+  SentTransaction             Transaction[]          @relation("sent")
+}
+
+model Otp {
+  email String @unique
+  otp   Int
+  User  User   @relation("otp", fields: [email], references: [email])
+}
+
+model ScheduledTransaction {
+  id          String            @unique @default(uuid())
+  senderId    String
+  receiverId  String
+  balance     Decimal
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  sendAt      DateTime          @default(now())
+  description String?
+  type        TransferType
+  Status      TransactionStatus
+  receiver    User              @relation("receivedSchedule", fields: [receiverId], references: [userId])
+  sender      User              @relation("sentSchedule", fields: [senderId], references: [userId])
+}
+
+model Transaction {
+  transactionId String            @unique @default(uuid())
+  senderId      String
+  receiverId    String
+  balanceBefore Decimal
+  balanceAfter  Decimal
+  balance       Decimal
+  createdAt     DateTime          @default(now())
+  fee           Decimal?
+  description   String?
+  type          TransferType
+  Status        TransactionStatus
+  receiver      User              @relation("received", fields: [receiverId], references: [userId])
+  sender        User              @relation("sent", fields: [senderId], references: [userId])
+}
+
+model Notification {
+  notificationId String           @unique @default(uuid())
+  type           NotificationType
+  creator        CreatorType
+  receiverId     String
+  balance        Decimal?
+  message        String
+  createdAt      DateTime         @default(now())
+  read           Boolean          @default(false)
+  Receiver       User             @relation("notification", fields: [receiverId], references: [userId])
+}
+
+model LoginHistory {
+  loginId  String   @unique @default(uuid())
+  userId   String
+  location String
+  loggedAt DateTime @default(now())
+}
+
+enum Status {
+  UNVERIFIED
+  ACTIVE
+  CLOSED
+  SUSPENDED
+}
+
+enum AccountType {
+  SAVING
+  FIXED
+  CURRENT
+}
+
+enum TransactionStatus {
+  FAILED
+  PENDING
+  COMPLETED
+}
+
+enum TransferType {
+  WALLET_TRANSFER
+  DEPOSIT
+  WITHDRAWAL
+  BANK_TRANSFER
+}
+
+enum NotificationType {
+  DEPOSITED
+  WITHDRAWN
+}
+
+enum CreatorType {
+  SYSTEM
+  USER
+}
