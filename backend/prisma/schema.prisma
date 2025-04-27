@@ -27,7 +27,7 @@ model User {
   accountType                 String
   balance                     Decimal                @default(0)
   status                      Status                 @default(UNVERIFIED)
-  transactionPin              Int?
+  transactionPin              String?
   dailyTransaction            Decimal                @default(0)
   monthlyTransaction          Decimal                @default(0)
   Notification                Notification[]         @relation("notification")
