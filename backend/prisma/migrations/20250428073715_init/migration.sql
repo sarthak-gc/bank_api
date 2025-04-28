@@ -11,10 +11,10 @@ CREATE TYPE "TransactionStatus" AS ENUM ('FAILED', 'PENDING', 'COMPLETED');
 CREATE TYPE "TransferType" AS ENUM ('WALLET_TRANSFER', 'DEPOSIT', 'WITHDRAWAL', 'BANK_TRANSFER');
 
 -- CreateEnum
-CREATE TYPE "NotificationType" AS ENUM ('DEPOSITED', 'WITHDRAWN');
+CREATE TYPE "NotificationType" AS ENUM ('DEPOSITED', 'WITHDRAWN', 'SYSTEM');
 
 -- CreateEnum
-CREATE TYPE "CreatorType" AS ENUM ('SYSTEM', 'USER');
+CREATE TYPE "OtpType" AS ENUM ('CHANGE_PASSWORD', 'CHANGE_PIN', 'REGISTER', 'DELETE');
 
 -- CreateTable
 CREATE TABLE "User" (
@@ -31,15 +31,20 @@ CREATE TABLE "User" (
     "accountType" TEXT NOT NULL,
     "balance" DECIMAL(65,30) NOT NULL DEFAULT 0,
     "status" "Status" NOT NULL DEFAULT 'UNVERIFIED',
-    "transactionPin" INTEGER,
+    "transactionPin" TEXT,
     "dailyTransaction" DECIMAL(65,30) NOT NULL DEFAULT 0,
     "monthlyTransaction" DECIMAL(65,30) NOT NULL DEFAULT 0
 );
 
 -- CreateTable
 CREATE TABLE "Otp" (
+    "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
-    "otp" INTEGER NOT NULL
+    "otp" INTEGER NOT NULL,
+    "type" "OtpType" NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "isUsed" BOOLEAN NOT NULL DEFAULT false
 );
 
 -- CreateTable
@@ -75,7 +80,6 @@ CREATE TABLE "Transaction" (
 CREATE TABLE "Notification" (
     "notificationId" TEXT NOT NULL,
     "type" "NotificationType" NOT NULL,
-    "creator" "CreatorType" NOT NULL,
     "receiverId" TEXT NOT NULL,
     "balance" DECIMAL(65,30),
     "message" TEXT NOT NULL,
@@ -87,7 +91,8 @@ CREATE TABLE "Notification" (
 CREATE TABLE "LoginHistory" (
     "loginId" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
-    "location" TEXT NOT NULL,
+    "ip" TEXT,
+    "location" TEXT,
     "loggedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -98,7 +103,7 @@ CREATE UNIQUE INDEX "User_userId_key" ON "User"("userId");
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Otp_email_key" ON "Otp"("email");
+CREATE UNIQUE INDEX "Otp_id_key" ON "Otp"("id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "ScheduledTransaction_id_key" ON "ScheduledTransaction"("id");
@@ -113,13 +118,13 @@ CREATE UNIQUE INDEX "Notification_notificationId_key" ON "Notification"("notific
 CREATE UNIQUE INDEX "LoginHistory_loginId_key" ON "LoginHistory"("loginId");
 
 -- AddForeignKey
-ALTER TABLE "Otp" ADD CONSTRAINT "Otp_email_fkey" FOREIGN KEY ("email") REFERENCES "User"("email") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Otp" ADD CONSTRAINT "Otp_email_fkey" FOREIGN KEY ("email") REFERENCES "User"("email") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ScheduledTransaction" ADD CONSTRAINT "ScheduledTransaction_receiverId_fkey" FOREIGN KEY ("receiverId") REFERENCES "User"("userId") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "ScheduledTransaction" ADD CONSTRAINT "ScheduledTransaction_receiverId_fkey" FOREIGN KEY ("receiverId") REFERENCES "User"("userId") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ScheduledTransaction" ADD CONSTRAINT "ScheduledTransaction_senderId_fkey" FOREIGN KEY ("senderId") REFERENCES "User"("userId") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "ScheduledTransaction" ADD CONSTRAINT "ScheduledTransaction_senderId_fkey" FOREIGN KEY ("senderId") REFERENCES "User"("userId") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Transaction" ADD CONSTRAINT "Transaction_receiverId_fkey" FOREIGN KEY ("receiverId") REFERENCES "User"("userId") ON DELETE RESTRICT ON UPDATE CASCADE;

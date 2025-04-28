@@ -1,4 +1,4 @@
-import { AccountType, PrismaClient, Status } from "@prisma/client";
+import { AccountType, OtpType, PrismaClient, Status } from "@prisma/client";
 import { Response } from "express";
 import bcrypt from "bcryptjs";
 type CreateUserT = {
@@ -58,13 +58,23 @@ export const createOtp = async (
   data: {
     email: string;
     otp: number;
+    type: OtpType;
   }
 ) => {
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
   await prisma.otp.create({
-    data,
+    data: {
+      ...data,
+      expiresAt,
+    },
   });
 };
-export const findOtp = async (prisma: PrismaClient, data: {}) => {
+
+type otpDataT = {
+  email: string;
+  type: OtpType;
+};
+export const findOtp = async (prisma: PrismaClient, data: otpDataT) => {
   const otp = await prisma.otp.findFirst({
     where: data,
   });
@@ -82,11 +92,28 @@ export const verifyUserStatus = async (prisma: PrismaClient, email: string) => {
     },
   });
 };
-
-export const deleteOtp = async (prisma: PrismaClient, email: string) => {
-  await prisma.otp.delete({
+export const deleteUser = async (prisma: PrismaClient, email: string) => {
+  await prisma.user.update({
     where: {
       email,
+    },
+    data: {
+      status: Status.CLOSED,
+      isVerified: false,
+      isDeleted: true,
+    },
+  });
+};
+
+export const deleteOtp = async (
+  prisma: PrismaClient,
+  type: OtpType,
+  id: string
+) => {
+  await prisma.otp.delete({
+    where: {
+      type,
+      id,
     },
   });
 };
@@ -121,14 +148,51 @@ export const getUpdatedData = async (
 };
 
 export const updateUser = async (
+  res: Response,
   prisma: PrismaClient,
   where: any,
   data: {},
-  select: {}
+  select?: {}
 ) => {
+  const user = await prisma.user.findFirst({
+    where,
+  });
+  if (!user) {
+    return res.json({
+      status: "error",
+      message: "Invalid action",
+    });
+  }
   await prisma.user.update({
     where: where,
     data,
     select,
+  });
+  if (!user) {
+    console.log("HI THERE");
+  }
+};
+
+export const validateType = (type: string): OtpType | null => {
+  if (type == "password") return OtpType.CHANGE_PASSWORD;
+  if (type == "pin") return OtpType.CHANGE_PIN;
+  if (type == "delete") return OtpType.DELETE;
+  if (type == "register") return OtpType.REGISTER;
+  return null;
+};
+
+export const validateOtp = async (
+  prisma: PrismaClient,
+  type: OtpType,
+  id: string
+) => {
+  await prisma.otp.update({
+    where: {
+      type,
+      id,
+    },
+    data: {
+      isUsed: true,
+    },
   });
 };

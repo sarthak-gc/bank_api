@@ -31,7 +31,7 @@ model User {
   dailyTransaction            Decimal                @default(0)
   monthlyTransaction          Decimal                @default(0)
   Notification                Notification[]         @relation("notification")
-  Otp                         Otp?                   @relation("otp")
+  Otp                         Otp[]                  @relation("otp")
   ScheduleReceivedTransaction ScheduledTransaction[] @relation("receivedSchedule")
   ScheduleSentTransaction     ScheduledTransaction[] @relation("sentSchedule")
   ReceivedTransaction         Transaction[]          @relation("received")
@@ -39,9 +39,15 @@ model User {
 }
 
 model Otp {
-  email String @unique
-  otp   Int
-  User  User   @relation("otp", fields: [email], references: [email])
+  id        String   @unique @default(uuid())
+  email     String
+  otp       Int
+  type      OtpType
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  isUsed    Boolean  @default(false)
+
+  User User @relation("otp", fields: [email], references: [email], onDelete: Cascade)
 }
 
 model ScheduledTransaction {
@@ -55,8 +61,8 @@ model ScheduledTransaction {
   description String?
   type        TransferType
   Status      TransactionStatus
-  receiver    User              @relation("receivedSchedule", fields: [receiverId], references: [userId])
-  sender      User              @relation("sentSchedule", fields: [senderId], references: [userId])
+  receiver    User              @relation("receivedSchedule", fields: [receiverId], references: [userId], onDelete: Cascade)
+  sender      User              @relation("sentSchedule", fields: [senderId], references: [userId], onDelete: Cascade)
 }
 
 model Transaction {
@@ -78,7 +84,6 @@ model Transaction {
 model Notification {
   notificationId String           @unique @default(uuid())
   type           NotificationType
-  creator        CreatorType
   receiverId     String
   balance        Decimal?
   message        String
@@ -90,7 +95,8 @@ model Notification {
 model LoginHistory {
   loginId  String   @unique @default(uuid())
   userId   String
-  location String
+  ip       String?
+  location String?
   loggedAt DateTime @default(now())
 }
 
@@ -123,9 +129,12 @@ enum TransferType {
 enum NotificationType {
   DEPOSITED
   WITHDRAWN
+  SYSTEM
 }
 
-enum CreatorType {
-  SYSTEM
-  USER
+enum OtpType {
+  CHANGE_PASSWORD
+  CHANGE_PIN
+  REGISTER
+  DELETE
 }

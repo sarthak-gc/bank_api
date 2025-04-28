@@ -12,13 +12,17 @@ import {
   updatePIN,
   deleteAccount,
   setPin,
+  requestPinChange,
+  requestDeleteAccount,
 } from "../controllers/user.controllers";
 import { authMiddleware } from "../middleware/authMiddleware";
+import { checkPasswordResetValidity } from "../middleware/checkPasswordResetValidity";
+import { checkAccountDeleteValidity } from "../middleware/checkAccountDeleteValidity";
 
 const userRoutes = express.Router();
 
 userRoutes.post("/signup", signup);
-userRoutes.post("/otp-verification", verifyOtp);
+userRoutes.post("/otp-verification/:type", verifyOtp); // register done
 userRoutes.post("/login", login);
 
 userRoutes.use(authMiddleware);
@@ -31,7 +35,11 @@ userRoutes.put("/me", updateMe);
 userRoutes.get("/balance", getBalance);
 userRoutes.post("/logout", logout);
 userRoutes.get("/notification", getNotifications);
-userRoutes.put("/updatePIN", updatePIN);
-userRoutes.delete("/deleteAccount", deleteAccount);
+
+userRoutes.post("/pin", requestPinChange);
+userRoutes.put("/pin", checkPasswordResetValidity, updatePIN);
+
+userRoutes.post("/deleteAccount", requestDeleteAccount);
+userRoutes.delete("/deleteAccount", checkAccountDeleteValidity, deleteAccount);
 
 export default userRoutes;
